@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
-import io
-import imageio
-import requests
 from PIL import Image
 import torch 
 import torch.nn as nn
@@ -11,67 +8,59 @@ import json
 
 from models.preprocess import preprocess
 
-
-
 # --------- double --------------
 
-from torchvision.models import vgg19, VGG19_Weights
-from torchvision.models import resnet50
-from torchvision.models import resnet18
+# from torchvision.models import vgg19, VGG19_Weights
+# from torchvision.models import resnet50
+# from torchvision.models import resnet18
 
-model_1 = vgg19(weights=VGG19_Weights.DEFAULT)
-model_2 = resnet18(pretrained=True)
-def double_classify(img): 
-    model_1.eval()
-    model_2.eval()
-    pred1 = model_1(img.unsqueeze(0)).softmax(dim=1)
-    pred2 = model_2(img.unsqueeze(0)).softmax(dim=1)
-    pred_vote = (pred1 + pred2)/2
-    sorted, indices = torch.sort(pred_vote, descending=True)
-    top_5 = (sorted*100).tolist()[0][:5]
-    top_5_i = indices.tolist()[0][:5]
-    top_5_n = list(map(decode, top_5_i))
-    return top_5_n, top_5
-labels = json.load(open('models/coffe_imagenet_class_index.json'))
-decode = lambda x: labels[str(x)][1]
-
-
+# model_1 = vgg19(weights=VGG19_Weights.DEFAULT)
+# model_2 = resnet18(pretrained=True)
+# def double_classify(img): 
+#     model_1.eval()
+#     model_2.eval()
+#     pred1 = model_1(img.unsqueeze(0)).softmax(dim=1)
+#     pred2 = model_2(img.unsqueeze(0)).softmax(dim=1)
+#     pred_vote = (pred1 + pred2)/2
+#     sorted, indices = torch.sort(pred_vote, descending=True)
+#     top_5 = (sorted*100).tolist()[0][:5]
+#     top_5_i = indices.tolist()[0][:5]
+#     top_5_n = list(map(decode, top_5_i))
+#     return top_5_n, top_5
+# labels = json.load(open('models/imagenet_class_index.json'))
+# decode = lambda x: labels[str(x)][1]
 
 # ----------- Streamlit --------------------------
 
 
-st.title('ПРОЕКТ:Введение в нейронные сети. Определение агро-культур и цвета зёрен кофе')
+st.title('Identification of agricultural crops and coffee bean colors')
 
-st.sidebar.header('Выберите страницу')
-page = st.sidebar.radio("Выберите страницу", ["Общая информация", "Кофе", "Агрокультуры", "ТОП-5 предсказанных категорий"])
+st.sidebar.header('Select a Page')
+page = st.sidebar.radio('Select a Page', ['General Information', 'Coffee bean classification', 'Agricultural Classification', 'TOP-5 predictions'])
 
-if page == "Общая информация":
+if page == "General Information":
         
-        st.header('Задачи:')
-        st.subheader('*Задача №1*: Классификация кофе')
-        
+        st.header('Tasks:')
+        st.subheader('*Task No. 1:* Coffee bean classification')
+    
+        st.subheader('*Task No. 2:* Agricultural Classification')
 
-        st.subheader('*Задача №2*: Классификация агро-культур')
-        
-
-        st.subheader('*Задача №3*: Классификация всего подряд')
+        st.subheader('*Task No. 3:* TOP-5 predictions')
         
 
-        st.header('Команда "VGG":')
-        st.subheader('Валерия')
-        st.subheader('Владислав')
+        st.subheader('Made by Vlad')
 
 
-if page == "Кофе":
+if page == 'Coffee bean classification':
 
     # -------- coffee -------------
 
 
     from torchvision.models import resnet18, ResNet18_Weights
-    model_coffe = resnet18(weights=ResNet18_Weights.DEFAULT)
-    model_coffe.fc = nn.Linear(512,4)
-    model_coffe.load_state_dict(torch.load('models/coffee_save.pt', map_location=torch.device('cpu')))
-    model_coffe.eval()
+    model_coffee = resnet18(weights=ResNet18_Weights.DEFAULT)
+    model_coffee.fc = nn.Linear(512,4)
+    model_coffee.load_state_dict(torch.load('models/coffee_save.pt', map_location=torch.device('cpu')))
+    model_coffee.eval()
     coffee_dict = {0: 'Dark', 1: 'Green', 2: 'Light', 3: 'Medium'}
 
     # image_url = st.text_input("Введите URL картинки кофейного зерна")
@@ -83,23 +72,25 @@ if page == "Кофе":
     #             st.subheader('Загруженная картинка')
     #             st.image(image)
 
-    uploaded_file = st.file_uploader("Перетащите картинку сюда или кликните для выбора файла", type=['png', 'jpg', 'jpeg'])
+    uploaded_file = st.file_uploader("Drag and drop an image here, or click to choose a file", type=['png', 'jpg', 'jpeg'])
 
     if uploaded_file is not None:
                 image = Image.open(uploaded_file)
-                st.subheader('Загруженная картинка')
+                st.subheader('Uploaded picture')
                 st.image(image)
 
-    
+
     if image is not None:
-        image = preprocess(image)
-        prediction = model_coffe(image.unsqueeze(0)).softmax(dim=1).argmax().item()
-        st.write('Предсказанный вид кофе: ', coffee_dict[prediction])
-    # chart_data = pd.DataFrame(prob_pred)
+        try:
+            image = preprocess(image)
+            prediction = model_coffee(image.unsqueeze(0)).softmax(dim=1).argmax().item()
+            st.write('Coffee class prediction: ', coffee_dict[prediction])
+        except Exception as e:
+            st.error(f"Error processing image: {e}")
 
     
 
-if page == "Агрокультуры":
+if page == "Agricultural Classification":
     
     # --------- agriculture ---------------
 
@@ -120,20 +111,20 @@ if page == "Агрокультуры":
     #             st.subheader('Загруженная картинка')
     #             st.image(image)
     
-    uploaded_file = st.file_uploader("Перетащите картинку сюда или кликните для выбора файла", type=['png', 'jpg', 'jpeg'])
+    uploaded_file = st.file_uploader("Drag and drop an image here, or click to choose a file", type=['png', 'jpg', 'jpeg'])
 
     if uploaded_file is not None:
                 image = Image.open(uploaded_file)
-                st.subheader('Загруженная картинка')
+                st.subheader('Uploaded picture')
                 st.image(image)
     
     if image is not None:
         image = preprocess(image)
         prediction = model_agri(image.unsqueeze(0)).softmax(dim=1).argmax().item()
-        st.write('Предсказанный вид агрокультуры: ', agri_dict[prediction])
+        st.write('Agriculture class prediction: ', agri_dict[prediction])
     # chart_data = pd.DataFrame(prob_pred)
 
-if page == "ТОП-5 предсказанных категорий":
+if page == "TOP-5 predictions":
     
     from torchvision.models import resnet50, ResNet50_Weights
     from torchvision.models import vgg19, VGG19_Weights
@@ -150,7 +141,7 @@ if page == "ТОП-5 предсказанных категорий":
         top_5_i = indices.tolist()[0][:5]
         top_5_n = list(map(decode, top_5_i))
         return top_5_n, top_5
-    labels = json.load(open('models/coffe_imagenet_class_index.json'))
+    labels = json.load(open('models/imagenet_class_index.json'))
     decode = lambda x: labels[str(x)][1]
     
     image = None
@@ -162,17 +153,16 @@ if page == "ТОП-5 предсказанных категорий":
     #             st.subheader('Загруженная картинка')
     #             st.image(image)
 
-    uploaded_file = st.file_uploader("Перетащите картинку сюда или кликните для выбора файла", type=['png', 'jpg', 'jpeg'])
+    uploaded_file = st.file_uploader("Drag and drop an image here, or click to choose a file", type=['png', 'jpg', 'jpeg'])
 
     if uploaded_file is not None:
                 image = Image.open(uploaded_file)
-                st.subheader('Загруженная картинка')
+                st.subheader('Uploaded picture')
                 st.image(image)
 
     if image is not None:
             image = preprocess(image)
             classes_pred, prob_pred = double_classify(image)
             for i in range(5): 
-                    st.write(f'С вероятностью {prob_pred[i]}% это {classes_pred[i]}')
+                    st.write(f'With a probability of {prob_pred[i]:.2f}% it is {classes_pred[i]}') 
     # chart_data = pd.DataFrame(prob_pred)  
-    # chart_data = pd.DataFrame(prob_pred)
