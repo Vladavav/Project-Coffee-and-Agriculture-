@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
-import io
-import imageio
-import requests
 from PIL import Image
 import torch 
 import torch.nn as nn
